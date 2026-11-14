@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUSAIN AI JARVIS PRIME</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:radial-gradient(circle,#142b43,#050914 75%);
+ color:white;
+ font-family:Segoe UI,Arial;
+ text-align:center;
+ min-height:100vh;
+}
+header{
+ padding:25px;
+ color:#d9bd80;
+ letter-spacing:5px;
+ font-weight:bold;
+}
+h1{
+ font-size:clamp(30px,6vw,48px);
+ letter-spacing:5px;
+ margin:20px 0 5px;
+}
+.sub{color:#91a9bf;letter-spacing:3px;font-size:12px}
+.orb{
+ width:150px;height:150px;
+ border-radius:50%;
+ margin:35px auto;
+ background:radial-gradient(circle,#a5f5ff,#087caa,#071426);
+ box-shadow:0 0 45px #26cfff;
+ animation:pulse 2s infinite;
+}
+@keyframes pulse{
+ 50%{box-shadow:0 0 80px #26cfff}
+}
+.panel{
+ max-width:650px;
+ margin:20px auto;
+ padding:20px;
+ background:#101c2e;
+ border:1px solid #29445f;
+ border-radius:20px;
+ width:94%;
+}
+#chat{
+ height:280px;
+ overflow:auto;
+ text-align:left;
+}
+.msg{
+ padding:12px;
+ margin:9px 0;
+ border-radius:12px;
+ background:#1b3048;
+ overflow-wrap:anywhere;
+}
+.user{background:#07516c;text-align:right}
+input[type=text]{
+ width:70%;
+ padding:14px;
+ border-radius:10px;
+ border:1px solid #47718d;
+ background:#071426;
+ color:white;
+}
+button{
+ padding:12px 18px;
+ margin:6px;
+ border:0;
+ border-radius:10px;
+ background:#087caa;
+ color:white;
+ font-weight:bold;
+ cursor:pointer;
+}
+button:hover{background:#10a7d5}
+select{
+ background:#071426;color:white;
+ padding:10px;border-radius:8px;
+}
+@media(max-width:500px){
+ input[type=text]{width:100%}
+ .orb{width:125px;height:125px}
+}
+</style>
+</head>
+
+<body>
+
+<header>HUSAIN SYSTEMS</header>
+
+<h1>JARVIS PRIME</h1>
+<p class="sub">PERSONAL AI VOICE ASSISTANT</p>
+
+<div class="orb" id="orb"></div>
+
+<div class="panel">
+
+ <div id="chat">
+  <div class="msg">
+   Hello Husain! I am JARVIS PRIME.
+   How can I help you today?
+  </div>
+ </div>
+
+ <input type="text" id="message"
+ placeholder="Ask JARVIS anything...">
+
+ <button onclick="sendMessage()">SEND</button>
+
+ <br>
+
+ <button onclick="startListening()">🎙 SPEAK</button>
+ <button onclick="stopVoice()">STOP VOICE</button>
+ <button onclick="clearChat()">CLEAR</button>
+
+ <br><br>
+
+ <label>Assistant voice:</label>
+
+ <select id="voice">
+  <option value="female">Female preferred</option>
+  <option value="default">Device default</option>
+ </select>
+
+</div>
+
+<script>
+
+const chat=document.getElementById("chat");
+
+function addMessage(text,type){
+ const div=document.createElement("div");
+ div.className="msg "+type;
+ div.textContent=text;
+ chat.appendChild(div);
+ chat.scrollTop=chat.scrollHeight;
+}
+
+function speak(text){
+
+ if(!window.speechSynthesis)return;
+
+ speechSynthesis.cancel();
+
+ const speech=new SpeechSynthesisUtterance(text);
+ speech.lang="en-IN";
+ speech.rate=.95;
+ speech.pitch=1;
+
+ if(document.getElementById("voice").value==="female"){
+  const voices=speechSynthesis.getVoices();
+
+  const female=voices.find(v=>
+   /zira|samantha|aria|jenny|susan|karen|female/i.test(v.name)
+  );
+
+  if(female)speech.voice=female;
+ }
+
+ speechSynthesis.speak(speech);
+}
+
+async function sendMessage(){
+
+ const box=document.getElementById("message");
+ const message=box.value.trim();
+
+ if(!message)return;
+
+ box.value="";
+ addMessage(message,"user");
+
+ const loading=document.createElement("div");
+ loading.className="msg";
+ loading.textContent="JARVIS is thinking...";
+ chat.appendChild(loading);
+
+ try{
+
+  const response=await fetch("/api/chat",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({message:message})
+  });
+
+  const data=await response.json();
+
+  if(!response.ok){
+   throw new Error(data.error||"AI service unavailable");
+  }
+
+  loading.textContent=data.reply;
+  speak(data.reply);
+
+ }catch(error){
+
+  loading.textContent=
+   "AI connection unavailable: "+error.message+
+   ". Please configure the secure AI backend.";
+
+ }
+
+}
+
+function startListening(){
+
+ const SpeechRecognition=
+ window.SpeechRecognition||
+ window.webkitSpeechRecognition;
+
+ if(!SpeechRecognition){
+  addMessage("Please use Chrome or Edge for voice recognition.","");
+  return;
+ }
+
+ const recognition=new SpeechRecognition();
+
+ recognition.lang="en-IN";
+ recognition.interimResults=false;
+
+ recognition.onstart=()=>{
+  document.getElementById("orb").style.boxShadow=
+  "0 0 90px #00ffcc";
+ };
+
+ recognition.onend=()=>{
+  document.getElementById("orb").style.boxShadow="";
+ };
+
+ recognition.onresult=(event)=>{
+  document.getElementById("message").value=
+  event.results[0][0].transcript;
+
+  sendMessage();
+ };
+
+ recognition.start();
+}
+
+function stopVoice(){
+ if(window.speechSynthesis){
+  speechSynthesis.cancel();
+ }
+}
+
+function clearChat(){
+ chat.innerHTML="";
+ addMessage("Chat cleared. Ready for your next command.","");
+}
+
+document.getElementById("message")
+.addEventListener("keydown",function(event){
+ if(event.key==="Enter")sendMessage();
+});
+
+</script>
+
+</body>
+</html>
